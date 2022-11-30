@@ -1,31 +1,82 @@
 #include "main.h"
+#include "ADC.h"
+#include "USART.h"
+#include "DM.h"
 
-/* Private variables ---------------------------------------------------------*/
+/* Private variables and function prototypes -----------------------------------------------*/
 UART_HandleTypeDef huart2;
-
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
+
+// Global Constants
+#define ADC_ARR_LEN 2048
+#define SAMPLING_FREQUENCY 2643
+
+// ADC Reading & Calculation Variables
+uint8_t ADC_flag = 0;
+uint16_t ADC_value = 0;
+uint16_t ADC_Arr[ADC_ARR_LEN];
+int volatile counter = 25;
 
 int main(void)
 {
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  /* Reset peripherals, & set system clock */
   HAL_Init();
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_USART2_UART_Init();
+  // Set up data transfer protocol
+  USART_init();
+
+  // Set up UI
+  GUI_init();
+
+  // Set Up ADC
+  ADC_init();
+  ADC1->CR |= ADC_CR_ADSTART;	// Starts conversion process
 
   while (1)
   {
+	  uint16_t samples_Taken = 0;	//counter for number of samples taken
 
+	  while(samples_Taken < ADC_ARR_LEN){ // Sample Lens
+
+		  if(ADC_flag){ //takes value every tenth read
+			  int analogVal = ADC_Conversion(ADC_value);
+
+			  //Convert Analog to Digital and stores it in Array
+			  ADC_Arr[samples_Taken] = analogVal;
+			  ADC_flag = 0;	//Reseting conversion flag
+
+			  samples_Taken++;
+		  }
+	  }
+	  HAL_Delay(500);
+
+	  // Clear the AC side of the UI
+	  clear_AC();
+
+	  //Find min/max/average and store them
+	  int Avg_Dig_Vals[3]; // These are saved as integers not doubles
+	  ADC_Avg(ADC_Arr, ADC_ARR_LEN ,Avg_Dig_Vals);
+
+	  //Print to Terminal
+	  update_DC(Avg_Dig_Vals[0], Avg_Dig_Vals[1], Avg_Dig_Vals[2]);
+
+	  ADC1->CR |= ADC_CR_ADSTART; //start recording again
   }
+}
 
+
+void ADC1_2_IRQHandler(){
+	if(ADC1->ISR & ADC_ISR_EOC){
+		ADC1->ISR &= ~(ADC_ISR_EOC);
+		ADC_value = ADC1->DR;
+		if(counter == 0){
+			ADC_flag = 1;
+			counter = 25;
+		}
+		counter--;
+		ADC1->CR |= ADC_CR_ADSTART; //start recording again
+	}
 }
 
 /**
@@ -81,78 +132,6 @@ void SystemClock_Config(void)
   */
   HAL_RCCEx_EnableMSIPLLMode();
 }
-
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
-
-}
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
