@@ -140,6 +140,18 @@ void clear_AC(){
 	USART_ESC_Code("[16;0H");	// Move cursor out of table
 }
 
+#define SOUND_SPEED 340 // m/s
+
+// Calculate distance from round trip travel time
+int calc_Distance(int RTT){
+	int distance = 0;
+
+	// Calculate Distance
+	distance = SOUND_SPEED * RTT / 2; // Will need to calibrate
+
+	return distance;
+}
+
 #define SQRT2x2 0.35355339059
 
 int calc_RMS(int PtoP){

@@ -22,4 +22,7 @@ void clear_DC();
 
 void clear_AC();
 
+int calc_Distance(int RTT){
+
+}
 #endif /* SRC_P3_DISTANCE_METER_DM_H_ */
