@@ -21,8 +21,14 @@ void DistanceSensor_init(){
 	TIM2->ARR = 319;
 		//TODO: On oscilloscope was 9.6 microseconds (seemed to work but could be improved)
 		//Setting up and clearing interrupt flag
+
+	// Enable Global Interrupts
 	TIM2->DIER |= TIM_DIER_UIE;
+
+	// Clear Interrupt Flag
 	TIM2->SR &= ~(TIM_SR_UIF);
+
+	// Start Global Interrupts
 	NVIC->ISER[0] |= 1<<TIM2_IRQn;
 	__enable_irq();
 
@@ -31,7 +37,7 @@ void DistanceSensor_init(){
 void requestDistance(){
 	//Will set the pin high to send the required 10 microsecond pulse to the distance sensor
 
-		//Starting Timer and turning PA5 High to have distance sensor to send pulse
+	//Starting Timer and turning PA5 High to have distance sensor to send pulse
 	TIM2->CR1 |= TIM_CR1_CEN;
 	GPIOA->ODR |= GPIO_PIN_5;
 
