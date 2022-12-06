@@ -54,9 +54,13 @@ int main(void)
   //Current Infinite While Loop for P3
   while(1){
 
-	  if(GPIOA->IDR & GPIO_PIN_6 ){
+	  if(GPIOA->IDR & GPIO_PIN_6){
 		  //case if the button is pressed switch to In or Cm
-		  measure_Mode ^= measure_Mode;
+		  if(measure_Mode){
+			  measure_Mode = 0;
+		  }else{
+			  measure_Mode = 1;
+		  }
 	  }
 	  if(new_read){
 		  //This basically starts TIM2
