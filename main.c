@@ -74,7 +74,7 @@ int main(void)
 		  //Stored values to get the distance between the two edges
 		  if(ADC_flag){
 			  ADC_flag = 0;
-			  if(previous_Val < (ADC_value - 2000) || previous_Val > (ADC_value + 2000)){
+			  if(previous_Val < (ADC_value - 1000) || previous_Val > (ADC_value + 1000)){
 				  //CASE: If the value changes by more than about 1.5V(catching both edges of the waveform to get period)
 				  edges[edge_Counter] = samples_Taken;
 				  edge_Counter ++;
@@ -88,6 +88,7 @@ int main(void)
 
 				  }
 			  }
+
 			  //Setting the previous value to the ADC to find the point in which ADC read the value goes high
 			  //Technically I believe the fastest way is using input capture mode(could be second option if this doesn't work too well
 			  previous_Val = ADC_value;
@@ -96,37 +97,6 @@ int main(void)
 		  }
 	  }
   }
-
-//  while (1)
-//  {
-//	  uint16_t samples_Taken = 0;	//counter for number of samples taken
-//
-//	  while(samples_Taken < ADC_ARR_LEN){ // Sample Lens
-//
-//		  if(ADC_flag){ //takes value every tenth read
-//			  int analogVal = ADC_Conversion(ADC_value);
-//
-//			  //Convert Analog to Digital and stores it in Array
-//			  ADC_Arr[samples_Taken] = analogVal;
-//			  ADC_flag = 0;	//Reseting conversion flag
-//
-//			  samples_Taken++;
-//		  }
-//	  }
-//	  HAL_Delay(500);
-//
-//	  // Clear the AC side of the UI
-//	  clear_AC();
-//
-//	  //Find min/max/average and store them
-//	  int Avg_Dig_Vals[3]; // These are saved as integers not doubles
-//	  ADC_Avg(ADC_Arr, ADC_ARR_LEN ,Avg_Dig_Vals);
-//
-//	  //Print to Terminal
-//	  update_DC(Avg_Dig_Vals[0], Avg_Dig_Vals[1], Avg_Dig_Vals[2]);
-//
-//	  ADC1->CR |= ADC_CR_ADSTART; //start recording again
-//  }
 }
 
 
