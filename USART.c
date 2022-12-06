@@ -72,7 +72,6 @@ void USART_print_num(int num){
 
 	// Print the digits
 	USART_print_bit(dig1 + ASCII_OFFSET);
-	USART_print_bit((uint8_t)'.');			// send "." after first 2 digits
 	USART_print_bit(dig2 + ASCII_OFFSET);
 	USART_print_bit(dig3 + ASCII_OFFSET);
 }

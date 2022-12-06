@@ -12,5 +12,7 @@
 
 void DistanceSensor_init();
 void requestDistance();
+int calcDistance(int RTT);
+
 
 #endif /* SRC_P3_DISTANCE_METER_DISTANCESENSOR_H_ */

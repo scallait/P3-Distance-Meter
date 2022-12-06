@@ -82,6 +82,7 @@ int main(void)
 					  read_Distance = 0;
 					  //Difference between the two is the period in ADC clock cycle reads
 					  distance_Timing = edges[1] - edges[0];
+					  distance_Timing = calcDistance(distance_Timing);
 					  USART_print_num(distance_Timing);
 					  USART_ESC_Code("[H");
 					  new_read = 1;
