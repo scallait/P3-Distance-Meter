@@ -1,8 +1,19 @@
 #include "main.h"
 #include "ADC.h"
 #include "USART.h"
-#include "DM.h"
+#include "DistanceSensor.h"
 
+/*
+READ!!!!!! Long Story Short, Once you read the Data Sheet and understand the we request for the system to take a distance measurement by
+a 10 microsecond wave which it then waits on a response that will be in the form of a square pulse with a period to Some equation of the
+distance(hands down a terrible explanation of how it works). Basically I'm at the point where I can see that the distance_Timing(the
+variable that I know the distance is) to decrease when I bring my hand closer and increase when I move my had away. I still need to turn
+that value into Cm (Just Math). There is also an Issue where it will get stuck in an infinite loop randomly and I don't know why. It's completely
+random; sometimes right when I run it, and sometimes not until way later. Ran the debugger and I'm 90% sure that its the ADC that stopped reading
+therefore never setting the ADC_flag high. Could I have deleted something when changing the ADC IRQ handler?
+
+--SJR
+*/
 /* Private variables and function prototypes -----------------------------------------------*/
 UART_HandleTypeDef huart2;
 void SystemClock_Config(void);
@@ -13,9 +24,15 @@ void SystemClock_Config(void);
 
 // ADC Reading & Calculation Variables
 uint8_t ADC_flag = 0;
-uint16_t ADC_value = 0;
+int ADC_value = 0;
 uint16_t ADC_Arr[ADC_ARR_LEN];
 int volatile counter = 25;
+
+//P3 Globals
+uint8_t read_Distance = 0; //after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
+uint8_t read_State = 0; //Flag to indicate while wait for timing echo wave
+int distance_Timing = 0;//some of these don't need to global
+
 
 int main(void)
 {
@@ -26,12 +43,65 @@ int main(void)
   // Set up data transfer protocol
   USART_init();
 
-  // Set up UI
-  GUI_init();
-
   // Set Up ADC
   ADC_init();
   ADC1->CR |= ADC_CR_ADSTART;	// Starts conversion process
+
+
+  //ADDed Code for P3
+  DistanceSensor_init();
+  int new_read = 1;
+  //Current Infinite While Loop for P3
+  while(1){
+
+
+	  if(new_read){
+		  //This basically starts TIM2
+		  requestDistance();
+		  //I used a tone of flags in this, will clean up tomorrow
+		  new_read = 0;
+
+	  }
+	  uint16_t samples_Taken = 0;
+	  int previous_Val = 0;
+	  uint16_t edges[2];
+	  uint16_t edge_Counter = 0;
+	  while(read_Distance){
+		  //While loop to wait on the echo response from the distance sensor
+		  //Stored values to get the distance between the two edges
+		  if(ADC_flag){
+			  ADC_flag = 0;
+			  if(previous_Val < (ADC_value - 2000) || previous_Val > (ADC_value + 2000)){\
+				  //CASE: If the value changes by more than about 1.5V(catching both edges of the waveform to get period)
+				  edges[edge_Counter] = samples_Taken;
+				  edge_Counter ++;
+				  if(edge_Counter == 2){
+					  read_Distance = 0;
+					  //Difference between the two is the period in ADC clock cycle reads
+					  distance_Timing = edges[1] - edges[0];
+					  USART_print_num(distance_Timing);
+					  USART_ESC_Code("[H");
+					  new_read = 1;
+
+				  }
+			  }
+			  //Setting the previous value to the ADC to find the point in which ADC read the value goes high
+			  //Technically I believe the fastest way is using input capture mode(could be second option if this doesn't work too well
+			  previous_Val = ADC_value;
+			  samples_Taken ++;
+		  }
+	  }
+	  //Just insuring the some flag aren't reset(a possible edge case)
+	  HAL_Delay(50);
+  }
+
+
+
+
+
+
+
+
 
   while (1)
   {
@@ -70,12 +140,19 @@ void ADC1_2_IRQHandler(){
 	if(ADC1->ISR & ADC_ISR_EOC){
 		ADC1->ISR &= ~(ADC_ISR_EOC);
 		ADC_value = ADC1->DR;
-		if(counter == 0){
-			ADC_flag = 1;
-			counter = 25;
-		}
-		counter--;
+		ADC_flag = 1;
 		ADC1->CR |= ADC_CR_ADSTART; //start recording again
+	}
+}
+
+void TIM2_IRQHandler(void){
+	if(TIM2->SR & TIM_SR_UIF){
+		TIM2->SR &= ~(TIM_SR_UIF);
+		//setting global to get read for a read
+		GPIOA->ODR &= ~(GPIO_PIN_5);
+		read_Distance = 1;
+		//Stops timer until another request is made
+		TIM2->CR1 &= ~(TIM_CR1_CEN);
 	}
 }
 
