@@ -10,8 +10,8 @@
 void DistanceSensor_init(){
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 
-		// Configure PA5 to output
-	GPIOA->MODER &= ~(GPIO_MODER_MODE5);
+		// Configure PA5 to output and PA6 to input
+	GPIOA->MODER &= ~(GPIO_MODER_MODE5 | GPIO_MODER_MODE6);
 	GPIOA->MODER |= GPIO_MODER_MODE5_0;
 
 		//Setting clock for TIM2
@@ -45,7 +45,7 @@ void requestDistance(){
 #define SPEED_CONSTANT 0.3451 // m/s
 
 // Calculate distance from round trip travel time
-int calcDistance(int RTT){
+int calcDistance(int RTT, int mode){
 	int distance = 0;
 
 	// Calculate Distance

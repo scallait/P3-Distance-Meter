@@ -32,7 +32,7 @@ int volatile counter = 25;
 uint8_t read_Distance = 0; //after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
 uint8_t read_State = 0; //Flag to indicate while wait for timing echo wave
 int distance_Timing = 0;//some of these don't need to global
-
+int measure_Mode = 0;
 
 int main(void)
 {
@@ -54,7 +54,10 @@ int main(void)
   //Current Infinite While Loop for P3
   while(1){
 
-
+	  if(GPIOA->IDR & GPIO_PIN_6 ){
+		  //case if the button is pressed switch to In or Cm
+		  measure_Mode ^= measure_Mode;
+	  }
 	  if(new_read){
 		  //This basically starts TIM2
 		  requestDistance();
@@ -82,7 +85,7 @@ int main(void)
 					  read_Distance = 0;
 					  //Difference between the two is the period in ADC clock cycle reads
 					  distance_Timing = edges[1] - edges[0];
-					  distance_Timing = calcDistance(distance_Timing);
+					  distance_Timing = calcDistance(distance_Timing, measure_Mode);
 					  USART_print_num(distance_Timing);
 					  USART_ESC_Code("[H");
 					  new_read = 1;
