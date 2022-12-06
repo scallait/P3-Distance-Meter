@@ -42,14 +42,19 @@ void requestDistance(){
 	GPIOA->ODR |= GPIO_PIN_5;
 }
 
-#define SPEED_CONSTANT 0.3451 // m/s
+#define SPEED_CONSTANT_CM 0.3451 // m/s
+#define SPEED_CONSTANT_IN 0.1352
 
 // Calculate distance from round trip travel time
 int calcDistance(int RTT, int mode){
 	int distance = 0;
 
-	// Calculate Distance
-	distance = RTT * SPEED_CONSTANT; // Will need to calibrate
-
+	if(mode){
+		distance = RTT * SPEED_CONSTANT_IN;
+	}
+	else{
+		// Calculate Distance
+		distance = RTT * SPEED_CONSTANT_CM; // Will need to calibrate
+	}
 	return distance;
 }
