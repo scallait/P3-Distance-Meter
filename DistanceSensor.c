@@ -43,6 +43,20 @@ void requestDistance(){
 }
 
 #define SPEED_CONSTANT 0.3451 // m/s
+#define CALIBRATION_FACTOR 1.115
+
+int calcAverage(int arr_len, uint8_t ADC_Vals[]){
+		int average = 0;	// Average Round Trip Time
+		int total = 0; 		// Round Trip Time
+
+		for(int i = 0; i < arr_len; i+=2){
+			total += ADC_Vals[i+1] - ADC_Vals[i];
+		}
+
+		average = total / (arr_len / 2); // Find average (Values of half)
+
+		return average;
+}
 
 // Calculate distance from round trip travel time
 int calcDistance(int RTT){
@@ -50,6 +64,8 @@ int calcDistance(int RTT){
 
 	// Calculate Distance
 	distance = RTT * SPEED_CONSTANT; // Will need to calibrate
+
+	distance = CALIBRATION_FACTOR * distance;
 
 	return distance;
 }

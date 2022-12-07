@@ -19,14 +19,12 @@ UART_HandleTypeDef huart2;
 void SystemClock_Config(void);
 
 // Global Constants
-#define ADC_ARR_LEN 2048
-#define SAMPLING_FREQUENCY 2643
+#define ADC_ARR_LEN 100
 
 // ADC Reading & Calculation Variables
 uint8_t ADC_flag = 0;
 int ADC_value = 0;
-uint16_t ADC_Arr[ADC_ARR_LEN];
-int volatile counter = 25;
+uint8_t ADC_Arr[ADC_ARR_LEN];
 
 //P3 Globals
 uint8_t read_Distance = 0; //after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
@@ -51,9 +49,10 @@ int main(void)
   //ADDed Code for P3
   DistanceSensor_init();
   int new_read = 1;
+  uint16_t edge_Counter = 0;
+
   //Current Infinite While Loop for P3
   while(1){
-
 
 	  if(new_read){
 		  //This basically starts TIM2
@@ -64,8 +63,7 @@ int main(void)
 	  }
 	  uint16_t samples_Taken = 0;
 	  int previous_Val = 0;
-	  uint16_t edges[2];
-	  uint16_t edge_Counter = 0;
+	  uint8_t edges[2 * ADC_ARR_LEN];
 
 	  ADC1->CR |= ADC_CR_ADSTART; //start recording again
 
@@ -77,16 +75,12 @@ int main(void)
 			  if(previous_Val < (ADC_value - 1000) || previous_Val > (ADC_value + 1000)){
 				  //CASE: If the value changes by more than about 1.5V(catching both edges of the waveform to get period)
 				  edges[edge_Counter] = samples_Taken;
-				  edge_Counter ++;
-				  if(edge_Counter == 2){
+				  edge_Counter++;
+				  if((edge_Counter % 2) == 0){
 					  read_Distance = 0;
 					  //Difference between the two is the period in ADC clock cycle reads
-					  distance_Timing = edges[1] - edges[0];
-					  distance_Timing = calcDistance(distance_Timing);
-					  USART_print_num(distance_Timing);
-					  USART_ESC_Code("[H");
+					  //distance_Timing = calcAverage(2 * ADC_ARR_LEN, edges);
 					  new_read = 1;
-
 				  }
 			  }
 
@@ -97,6 +91,19 @@ int main(void)
 			  ADC1->CR |= ADC_CR_ADSTART; //start recording again
 		  }
 	  }
+
+	  if(edge_Counter >= (2 * ADC_ARR_LEN)){
+		  read_Distance = 0;
+
+		  distance_Timing = calcAverage(2 * ADC_ARR_LEN, edges);
+		  distance_Timing = calcDistance(distance_Timing);
+		  USART_print_num(distance_Timing);
+		  USART_ESC_Code("[H");
+		  //Difference between the two is the period in ADC clock cycle reads
+		  new_read = 1;
+		  edge_Counter = 0;
+	  }
+
   }
 }
 
