@@ -10,8 +10,8 @@
 void DistanceSensor_init(){
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 
-		// Configure PA5 to output
-	GPIOA->MODER &= ~(GPIO_MODER_MODE5);
+		// Configure PA5 to output and PA6 to input
+	GPIOA->MODER &= ~(GPIO_MODER_MODE5 | GPIO_MODER_MODE6);
 	GPIOA->MODER |= GPIO_MODER_MODE5_0;
 
 		//Setting clock for TIM2
