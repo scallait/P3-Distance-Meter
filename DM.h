@@ -12,15 +12,7 @@
 
 void GUI_init();
 
-void update_DC(int min, int max, int avg);
-
-void update_AC(int Vrms, int ptop, int freq, int DCOffset);
-
-int calc_RMS(int ptop);
-
-void clear_DC();
-
-void clear_AC();
+void printDistance(int centimeters, int inches);
 
 int calc_Distance(int RTT);
 

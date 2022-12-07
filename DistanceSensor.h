@@ -13,7 +13,7 @@
 void DistanceSensor_init();
 void requestDistance();
 int calcDistance(int RTT);
-int calcAverage(int arr_len, uint8_t ADC_Vals[]);
+int calcAverage(int arr_len, uint16_t ADC_Vals[]);
 
 
 

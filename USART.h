@@ -21,6 +21,6 @@ void USART_print_bit(uint8_t character);
 
 void USART_print_num(int number);
 
-void USART_print_freq(int num);
+void USART_print_decimal(int num);
 
 #endif /* SRC_P3_DISTANCE_METER_USART_H_ */

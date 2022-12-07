@@ -64,7 +64,7 @@ void USART_print(char character[]){
 #define ASCII_OFFSET 48
 
 void USART_print_num(int num){
-	int num_int = (int)(num); 	// Truncate
+	uint16_t num_int = (uint8_t)(num); 	// Truncate
 
 	uint8_t dig1 = num_int / 100;
 	uint8_t dig2 = (num_int - (dig1 * 100)) / 10;
@@ -76,19 +76,18 @@ void USART_print_num(int num){
 	USART_print_bit(dig3 + ASCII_OFFSET);
 }
 
-void USART_print_freq(int num){
+void USART_print_decimal(int num){
 	int num_int = (int)(num); 	// Truncate
 
-	uint8_t dig1 = num_int / 1000;
-	uint8_t dig2 = (num_int - (dig1 * 1000)) / 100;
-	uint8_t dig3 = (num_int - (dig1 * 1000) - (dig2 * 100)) / 10;
-	uint8_t dig4 = num_int - (dig1 * 1000) - (dig2 * 100) - dig3 * 10;
+	uint8_t dig1 = num_int / 100;
+	uint8_t dig2 = (num_int - (dig1 * 100)) / 10;
+	uint8_t dig3 = num_int - (dig1 * 100) - (dig2 * 10);
 
 	// Print the digits
 	USART_print_bit(dig1 + ASCII_OFFSET);
+	USART_print_bit((uint8_t)'.');			// send "." after first 2 digits
 	USART_print_bit(dig2 + ASCII_OFFSET);
 	USART_print_bit(dig3 + ASCII_OFFSET);
-	USART_print_bit(dig4 + ASCII_OFFSET);
 }
 
 void USART_print_bit(uint8_t character){

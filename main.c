@@ -2,6 +2,7 @@
 #include "ADC.h"
 #include "USART.h"
 #include "DistanceSensor.h"
+#include "DM.h"
 
 /*
 READ!!!!!! Long Story Short, Once you read the Data Sheet and understand the we request for the system to take a distance measurement by
@@ -24,7 +25,7 @@ void SystemClock_Config(void);
 // ADC Reading & Calculation Variables
 uint8_t ADC_flag = 0;
 int ADC_value = 0;
-uint8_t ADC_Arr[ADC_ARR_LEN];
+uint16_t ADC_Arr[ADC_ARR_LEN];
 
 //P3 Globals
 uint8_t read_Distance = 0; //after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
@@ -40,6 +41,7 @@ int main(void)
 
   // Set up data transfer protocol
   USART_init();
+  GUI_init();
 
   // Set Up ADC
   ADC_init();
@@ -63,7 +65,7 @@ int main(void)
 	  }
 	  uint16_t samples_Taken = 0;
 	  int previous_Val = 0;
-	  uint8_t edges[2 * ADC_ARR_LEN];
+	  uint16_t edges[2 * ADC_ARR_LEN];
 
 	  ADC1->CR |= ADC_CR_ADSTART; //start recording again
 
@@ -97,8 +99,7 @@ int main(void)
 
 		  distance_Timing = calcAverage(2 * ADC_ARR_LEN, edges);
 		  distance_Timing = calcDistance(distance_Timing);
-		  USART_print_num(distance_Timing);
-		  USART_ESC_Code("[H");
+		  printDistance(distance_Timing, distance_Timing * 0.393701);
 		  //Difference between the two is the period in ADC clock cycle reads
 		  new_read = 1;
 		  edge_Counter = 0;
