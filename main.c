@@ -3,6 +3,7 @@
 #include "USART.h"
 #include "DistanceSensor.h"
 #include "DM.h"
+#include "keypad.h"
 
 /*
 READ!!!!!! Long Story Short, Once you read the Data Sheet and understand the we request for the system to take a distance measurement by
@@ -26,6 +27,7 @@ void SystemClock_Config(void);
 uint8_t ADC_flag = 0;
 int ADC_value = 0;
 uint16_t ADC_Arr[ADC_ARR_LEN];
+int cnt2D = 0;
 
 //P3 Globals
 uint8_t read_Distance = 0; //after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
@@ -43,6 +45,10 @@ int main(void)
   USART_init();
   GUI_init();
 
+  // Set up the Keypad
+  keypad_init();
+  int key_press = -1;
+
   // Set Up ADC
   ADC_init();
   ADC1->CR |= ADC_CR_ADSTART;	// Starts conversion process
@@ -52,25 +58,43 @@ int main(void)
   DistanceSensor_init();
   int new_read = 1;
   uint16_t edge_Counter = 0;
+  int cnt2D = 0;
+  int DIM_FLAG = 1;
+  int MEASURE_RDY = 0;
+  uint16_t array2D[2] = {0};
 
   //Current Infinite While Loop for P3
   while(1){
 
-	  if(GPIOA->IDR & GPIO_PIN_6){
-		  //case if the button is pressed switch to In or Cm
-		  if(measure_Mode){
-			  measure_Mode = 0;
-		  }else{
-			  measure_Mode = 1;
-		  }
+	  // Key Debounce
+	  key_press = keypad_read();			// Read the keypad
+
+	  if(key_press == 1){
+		  GUI_init();
+		  DIM_FLAG = 1;
+		  MEASURE_RDY = 0;
 	  }
+	  if(key_press == 2){
+		  DIM_FLAG = 2; // Need 2 measurements first
+		  MEASURE_RDY = 0;
+		  array2D[0] = 0;
+		  array2D[1] = 0;
+		  GUI_2D_init();
+	  }
+	  if(key_press == 10){
+		  MEASURE_RDY = 1; // Have first measurement
+	  }
+
+	  //USART_print_num(key_press + 1);
+
 	  if(new_read){
 		  //This basically starts TIM2
 		  requestDistance();
 		  //I used a tone of flags in this, will clean up tomorrow
 		  new_read = 0;
-
+		  while(!(ADC1->ISR & ADC_ISR_EOC));
 	  }
+
 	  uint16_t samples_Taken = 0;
 	  int previous_Val = 0;
 	  uint16_t edges[2 * ADC_ARR_LEN];
@@ -107,11 +131,33 @@ int main(void)
 
 		  distance_Timing = calcAverage(2 * ADC_ARR_LEN, edges);
 		  distance_Timing = calcDistance(distance_Timing);
-		  printDistance(distance_Timing, distance_Timing * 0.393701);
+
+		  if(DIM_FLAG == 2){
+			  if(MEASURE_RDY){
+				  array2D[cnt2D] = distance_Timing;
+				  if(cnt2D >= 1){
+					  print2Distance(array2D);
+					  cnt2D = -1;
+					  while((keypad_read() == -1) || (keypad_read() == 10)){};
+				  }
+				  HAL_Delay(5);
+				  MEASURE_RDY = 0;
+				  cnt2D++;
+			  }
+			  else{
+				  array2D[cnt2D] = distance_Timing;
+				  print2Distance(array2D);
+			  }
+		  }
+		  else{
+			  printDistance(distance_Timing, distance_Timing * 0.393701);
+		  }
+
 		  //Difference between the two is the period in ADC clock cycle reads
 		  new_read = 1;
 		  edge_Counter = 0;
 	  }
+
 
   }
 }

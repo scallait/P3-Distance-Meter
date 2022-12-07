@@ -12,7 +12,11 @@
 
 void GUI_init();
 
+void GUI_2D_init();
+
 void printDistance(int centimeters, int inches);
+
+void print2Distance(uint16_t array2D[]);
 
 int calc_Distance(int RTT);
 

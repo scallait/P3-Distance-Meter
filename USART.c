@@ -63,8 +63,25 @@ void USART_print(char character[]){
 
 #define ASCII_OFFSET 48
 
+void USART_print_area(int num){
+	uint16_t num_int = (uint16_t)(num); 	// Truncate
+
+	uint8_t dig1 = num_int / 10000;
+	uint8_t dig2 = (num_int - (dig1 * 10000)) / 1000;
+	uint8_t dig3 = (num_int - (dig1 * 10000) - (dig2 * 1000)) / 100 ;
+	uint8_t dig4 = (num_int - (dig1 * 10000) - (dig2 * 1000) - (dig3 * 100)) / 10 ;
+	uint8_t dig5 = (num_int - (dig1 * 10000) - (dig2 * 1000) - (dig3 * 100) - dig4 * 10);
+
+	// Print the digits
+	USART_print_bit(dig1 + ASCII_OFFSET);
+	USART_print_bit(dig2 + ASCII_OFFSET);
+	USART_print_bit(dig3 + ASCII_OFFSET);
+	USART_print_bit(dig4 + ASCII_OFFSET);
+	USART_print_bit(dig5 + ASCII_OFFSET);
+}
+
 void USART_print_num(int num){
-	uint16_t num_int = (uint8_t)(num); 	// Truncate
+	uint16_t num_int = (uint16_t)(num); 	// Truncate
 
 	uint8_t dig1 = num_int / 100;
 	uint8_t dig2 = (num_int - (dig1 * 100)) / 10;
