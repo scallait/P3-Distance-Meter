@@ -12,6 +12,7 @@
 #include "main.h"
 
 void keypad_init();
+
 int16_t keypad_read();
 
 #endif /* SRC_KEYPAD_H_ */

@@ -5,35 +5,30 @@
 #include "DM.h"
 #include "keypad.h"
 
-/*
-READ!!!!!! Long Story Short, Once you read the Data Sheet and understand the we request for the system to take a distance measurement by
-a 10 microsecond wave which it then waits on a response that will be in the form of a square pulse with a period to Some equation of the
-distance(hands down a terrible explanation of how it works). Basically I'm at the point where I can see that the distance_Timing(the
-variable that I know the distance is) to decrease when I bring my hand closer and increase when I move my had away. I still need to turn
-that value into Cm (Just Math). There is also an Issue where it will get stuck in an infinite loop randomly and I don't know why. It's completely
-random; sometimes right when I run it, and sometimes not until way later. Ran the debugger and I'm 90% sure that its the ADC that stopped reading
-therefore never setting the ADC_flag high. Could I have deleted something when changing the ADC IRQ handler?
 
---SJR
-*/
 /* Private variables and function prototypes -----------------------------------------------*/
 UART_HandleTypeDef huart2;
 void SystemClock_Config(void);
 
 // Global Constants
 #define ADC_ARR_LEN 100
+#define NO_KEY_PRESS -1
+#define EDGE_THRESHOLD 1000
+#define CONFIRM_KEY 10
+#define DEBOUNCE_DELAY 5
+#define CM_TO_INCHES 0.393701
 
-// ADC Reading & Calculation Variables
-uint8_t ADC_flag = 0;
-int ADC_value = 0;
-uint16_t ADC_Arr[ADC_ARR_LEN];
-int cnt2D = 0;
+// ADC Reading & Calculation Globals
+uint8_t ADC_flag = 0;			// Flag for if ADC value is ready to be read
+int ADC_value = 0;				// Variable to hold value
+uint16_t ADC_Arr[ADC_ARR_LEN];	// Array to hold ADC values
+int cnt2D = 0;					// Measurement count for 2 input mode
 
-//P3 Globals
-uint8_t read_Distance = 0; //after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
-uint8_t read_State = 0; //Flag to indicate while wait for timing echo wave
-int distance_Timing = 0;//some of these don't need to global
-int measure_Mode = 0;
+//Digital Meter Specific Globals
+uint8_t read_Distance = 0; 		// after the distance sensor has sent the 10 microsecond pulse and will be receiving a read soon
+uint8_t read_State = 0; 		// Flag to indicate while wait for timing echo wave
+int distance_Timing = 0;		// some of these don't need to global
+
 
 int main(void)
 {
@@ -47,73 +42,79 @@ int main(void)
 
   // Set up the Keypad
   keypad_init();
-  int key_press = -1;
+  int key_press = NO_KEY_PRESS;
 
   // Set Up ADC
   ADC_init();
   ADC1->CR |= ADC_CR_ADSTART;	// Starts conversion process
 
-
-  //ADDed Code for P3
+  // Distance Sensor set up and flags
   DistanceSensor_init();
   int new_read = 1;
-  uint16_t edge_Counter = 0;
-  int cnt2D = 0;
-  int DIM_FLAG = 1;
   int MEASURE_RDY = 0;
+
+  // Variables to save ADC Values
+  uint16_t edge_Counter = 0;
   uint16_t array2D[2] = {0};
 
-  //Current Infinite While Loop for P3
+
+  // Input Mode Variables and flags
+  int cnt2D = 0;
+  int DIM_FLAG = 1;
+
+
   while(1){
 
-	  // Key Debounce
 	  key_press = keypad_read();			// Read the keypad
 
-	  if(key_press == 1){
+	  // Check for key presses
+	  if(key_press == 1){ // 1 input measurement mode
+		  // set up for 1 input measurement mode
 		  GUI_init();
 		  DIM_FLAG = 1;
 		  MEASURE_RDY = 0;
 	  }
-	  if(key_press == 2){
-		  DIM_FLAG = 2; // Need 2 measurements first
+	  else if(key_press == 2){	// 2 input measurement mode
+		  // Set up for 2 input measurement mode
+		  DIM_FLAG = 2;
 		  MEASURE_RDY = 0;
 		  array2D[0] = 0;
 		  array2D[1] = 0;
 		  GUI_2D_init();
 	  }
-	  if(key_press == 10){
-		  MEASURE_RDY = 1; // Have first measurement
+	  else if(key_press == 10){	// confirm current measurement key
+		  MEASURE_RDY = 1;
 	  }
 
-	  //USART_print_num(key_press + 1);
-
+	  // Sends out pulse for a new measurement reading
 	  if(new_read){
-		  //This basically starts TIM2
 		  requestDistance();
-		  //I used a tone of flags in this, will clean up tomorrow
 		  new_read = 0;
-		  while(!(ADC1->ISR & ADC_ISR_EOC));
+		  while(!(ADC1->ISR & ADC_ISR_EOC));	// Wait for return pulse
 	  }
 
+	  // ADC Variables
 	  uint16_t samples_Taken = 0;
 	  int previous_Val = 0;
 	  uint16_t edges[2 * ADC_ARR_LEN];
 
-	  ADC1->CR |= ADC_CR_ADSTART; //start recording again
+	  ADC1->CR |= ADC_CR_ADSTART; // Start ADC again
 
+	  // While loop to wait on ADC processing
 	  while(read_Distance){
-		  //While loop to wait on the echo response from the distance sensor
+
 		  //Stored values to get the distance between the two edges
 		  if(ADC_flag){
+
 			  ADC_flag = 0;
-			  if(previous_Val < (ADC_value - 1000) || previous_Val > (ADC_value + 1000)){
+			  if(previous_Val < (ADC_value - EDGE_THRESHOLD) || previous_Val > (ADC_value + EDGE_THRESHOLD)){
 				  //CASE: If the value changes by more than about 1.5V(catching both edges of the waveform to get period)
 				  edges[edge_Counter] = samples_Taken;
 				  edge_Counter++;
+
+				  // Read a full pulse
 				  if((edge_Counter % 2) == 0){
 					  read_Distance = 0;
-					  //Difference between the two is the period in ADC clock cycle reads
-					  //distance_Timing = calcAverage(2 * ADC_ARR_LEN, edges);
 					  new_read = 1;
 				  }
 			  }
@@ -126,31 +127,38 @@ int main(void)
 		  }
 	  }
 
+	  // Check if required number of measurements are taken
 	  if(edge_Counter >= (2 * ADC_ARR_LEN)){
 		  read_Distance = 0;
 
+		  // Calculate Distance & Timing
 		  distance_Timing = calcAverage(2 * ADC_ARR_LEN, edges);
 		  distance_Timing = calcDistance(distance_Timing);
 
+		  // Check input mode and display accordingly
 		  if(DIM_FLAG == 2){
+			  // Check if current measurement is confirmed in 2 input mode
 			  if(MEASURE_RDY){
 				  array2D[cnt2D] = distance_Timing;
+
+				  // Check if 2nd measurement
 				  if(cnt2D >= 1){
 					  print2Distance(array2D);
 					  cnt2D = -1;
-					  while((keypad_read() == -1) || (keypad_read() == 10)){};
+					  while((keypad_read() == -1) || (keypad_read() == CONFIRM_KEY)){};
 				  }
-				  HAL_Delay(5);
+				  HAL_Delay(DEBOUNCE_DELAY);
 				  MEASURE_RDY = 0;
 				  cnt2D++;
 			  }
+			  // 1 input measurment mode
 			  else{
 				  array2D[cnt2D] = distance_Timing;
 				  print2Distance(array2D);
 			  }
 		  }
 		  else{
-			  printDistance(distance_Timing, distance_Timing * 0.393701);
+			  printDistance(distance_Timing, distance_Timing * CM_TO_INCHES);
 		  }
 
 		  //Difference between the two is the period in ADC clock cycle reads
@@ -162,16 +170,18 @@ int main(void)
   }
 }
 
-
+// Handler for ADC interrupts
 void ADC1_2_IRQHandler(){
+	// Check if ADC conversion is done
 	if(ADC1->ISR & ADC_ISR_EOC){
 		ADC1->ISR &= ~(ADC_ISR_EOC);
 		ADC_value = ADC1->DR;
-		ADC_flag = 1;
+		ADC_flag = 1;		// Set ADC ready to read flag
 	}
 	ADC1->CR |= ADC_CR_ADSTART; //start recording again
 }
 
+// This is the timer
 void TIM2_IRQHandler(void){
 	if(TIM2->SR & TIM_SR_UIF){
 		TIM2->SR &= ~(TIM_SR_UIF);

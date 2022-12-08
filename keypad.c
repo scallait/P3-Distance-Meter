@@ -7,9 +7,11 @@
 
 #include "keypad.h"
 
+// Bitmask for corresponding row and column pins
 int rows = GPIO_PIN_1;
 int cols = GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
 
+// Initializes keypad
 void keypad_init(){
 	// Enable the clock to the internal peripheral (GPIO Port A)
 	RCC->AHB2ENR |= (RCC_AHB2ENR_GPIOCEN);
@@ -28,37 +30,44 @@ void keypad_init(){
 	GPIOC->BSRR = GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
 
 }
+
+#define REGISTER_RESET_SHIFT 16
+#define ONE_KEY 1
+#define TWO_KEY 2
+#define THREE_KEY 3
+#define TEN_KEY 10
+
+// Reads a key press from the keypad
 int16_t keypad_read(){
 	GPIOC->BSRR = cols; // Set all columns to high
 	// Checks for input from any row
 	if(GPIOC->IDR & (rows)){
 		GPIOC->BRR = cols; // Turns off all columns
 
-		// Check column 0
+		// Check column 0 (Reset previous column pin and set next column pin high)
 		GPIOC->BSRR = GPIO_PIN_4;
 		if(GPIOC->IDR & (rows)){
-			return 1;
+			return ONE_KEY;
 		}
 
-		// Check column 1
-		GPIOC->BSRR = GPIO_PIN_5 | (GPIO_PIN_4 << 16);
+		// Check column 1 (Reset previous column pin and set next column pin high)
+		GPIOC->BSRR = GPIO_PIN_5 | (GPIO_PIN_4 << REGISTER_RESET_SHIFT);
 		if(GPIOC->IDR & (rows)){
-			return 2;
+			return TWO_KEY;
 		}
 
-		// Check column 2
-		GPIOC->BSRR = GPIO_PIN_6 | (GPIO_PIN_5 << 16);
+		// Check column 2 (Reset previous column pin and set next column pin high)
+		GPIOC->BSRR = GPIO_PIN_6 | (GPIO_PIN_5 << REGISTER_RESET_SHIFT);
 		if(GPIOC->IDR & (rows)){
-			return 3;
+			return THREE_KEY;
 		}
 
-		// Check column 3
-		GPIOC->BSRR = GPIO_PIN_7 | (GPIO_PIN_6 << 16);
+		// Check column 3 (Reset previous column pin and set next column pin high)
+		GPIOC->BSRR = GPIO_PIN_7 | (GPIO_PIN_6 << REGISTER_RESET_SHIFT);
 		if(GPIOC->IDR & (rows)){
-			return 10;
+			return TEN_KEY;
 		}
 
-		GPIOC->BSRR = GPIO_PIN_7 << 16;
 	}
 	return -1; // No button pressed
 }

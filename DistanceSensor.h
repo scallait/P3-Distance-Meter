@@ -11,10 +11,12 @@
 #include "main.h"
 
 void DistanceSensor_init();
-void requestDistance();
-int calcDistance(int RTT);
-int calcAverage(int arr_len, uint16_t ADC_Vals[]);
 
+void requestDistance();
+
+int calcDistance(int RTT);
+
+int calcAverage(int arr_len, uint16_t ADC_Vals[]);
 
 
 #endif /* SRC_P3_DISTANCE_METER_DISTANCESENSOR_H_ */

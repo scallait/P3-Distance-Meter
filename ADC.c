@@ -55,17 +55,22 @@ void ADC_init(){
 
 #define MAX_ANALOG 4095.0
 #define REF_VOLTAGE 330
+#define LOW_CALIBRATION_CUTOFF 434
+#define MID_CALIBRATION_CUTOFF 1861
+#define LOW_CALIBRATION_COEFF 1.02
+#define MID_CALIBRATION_COEFF 1.008
+#define HIGH_CALIBRATION_COEFF 1.0028
 
 int ADC_Conversion(uint16_t dig_Val){
 	// Calibration
-	if(dig_Val < 434){ // 0 -> 0.35 V ?
-		dig_Val *= 1.02;
+	if(dig_Val < LOW_CALIBRATION_CUTOFF){ // 0 -> 0.35 V ?
+		dig_Val *= LOW_CALIBRATION_COEFF;
 	}
-	if(dig_Val < 1861){ // 0.35 -> 1.5 V
-		dig_Val *= 1.008;
+	if(dig_Val < MID_CALIBRATION_CUTOFF){ // 0.35 -> 1.5 V
+		dig_Val *= MID_CALIBRATION_COEFF;
 	}
 	else{ // 1.5 -> 3.3 V
-		dig_Val *= 1.0028;
+		dig_Val *= HIGH_CALIBRATION_COEFF;
 	}
 
 	// Calculation
@@ -74,23 +79,4 @@ int ADC_Conversion(uint16_t dig_Val){
 	return analog_Val;
 }
 
-void ADC_Avg(uint16_t * ADC_Arr, int array_length, int * output){
-	//Finding Min/Max/Avg of sample points
-	//output is MIN, MAX, AVG
-	int total = 0; //total to be used to find Avg
-	output[0] = ADC_Arr[0]; //Setting Original min to compare to
-	output[1] = ADC_Arr[0];
-
-	for(int i = 0; i < array_length; i++){
-		if(ADC_Arr[i] < output[0]){ //checking for new Min
-			output[0] = ADC_Arr[i];
-		}
-		if(ADC_Arr[i] > output[1]){ //checking for new Max
-			output[1] = ADC_Arr[i];
-		}
-		total += ADC_Arr[i]; //Adding val to total
-	}
-
-	output[2] = total / array_length; //Finding Avg of Sample set
-}
 
