@@ -15,6 +15,8 @@ void SystemClock_Config(void);
 #define NO_KEY_PRESS -1
 #define EDGE_THRESHOLD 1000
 #define CONFIRM_KEY 10
+#define ONE_INPUT_MODE 1
+#define TWO_INPUT_MODE 2
 #define DEBOUNCE_DELAY 5
 #define CM_TO_INCHES 0.393701
 
@@ -60,7 +62,7 @@ int main(void)
 
   // Input Mode Variables and flags
   int cnt2D = 0;
-  int DIM_FLAG = 1;
+  int DIM_FLAG = ONE_INPUT_MODE;
 
 
   while(1){
@@ -68,21 +70,21 @@ int main(void)
 	  key_press = keypad_read();			// Read the keypad
 
 	  // Check for key presses
-	  if(key_press == 1){ // 1 input measurement mode
+	  if(key_press == ONE_INPUT_MODE){ // 1 input measurement mode
 		  // set up for 1 input measurement mode
 		  GUI_init();
-		  DIM_FLAG = 1;
+		  DIM_FLAG = ONE_INPUT_MODE;
 		  MEASURE_RDY = 0;
 	  }
-	  else if(key_press == 2){	// 2 input measurement mode
+	  else if(key_press == TWO_INPUT_MODE){	// 2 input measurement mode
 		  // Set up for 2 input measurement mode
-		  DIM_FLAG = 2;
+		  DIM_FLAG = TWO_INPUT_MODE;
 		  MEASURE_RDY = 0;
 		  array2D[0] = 0;
 		  array2D[1] = 0;
 		  GUI_2D_init();
 	  }
-	  else if(key_press == 10){	// confirm current measurement key
+	  else if(key_press == CONFIRM_KEY){	// confirm current measurement key
 		  MEASURE_RDY = 1;
 	  }
 
@@ -136,7 +138,7 @@ int main(void)
 		  distance_Timing = calcDistance(distance_Timing);
 
 		  // Check input mode and display accordingly
-		  if(DIM_FLAG == 2){
+		  if(DIM_FLAG == TWO_INPUT_MODE){
 			  // Check if current measurement is confirmed in 2 input mode
 			  if(MEASURE_RDY){
 				  array2D[cnt2D] = distance_Timing;
@@ -145,7 +147,7 @@ int main(void)
 				  if(cnt2D >= 1){
 					  print2Distance(array2D);
 					  cnt2D = -1;
-					  while((keypad_read() == -1) || (keypad_read() == CONFIRM_KEY)){};
+					  while((keypad_read() == NO_KEY_PRESS) || (keypad_read() == CONFIRM_KEY)){};
 				  }
 				  HAL_Delay(DEBOUNCE_DELAY);
 				  MEASURE_RDY = 0;
